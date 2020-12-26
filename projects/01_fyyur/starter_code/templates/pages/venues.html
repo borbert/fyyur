@@ -6,14 +6,33 @@
 	<ul class="items">
 		{% for venue in area.venues %}
 		<li>
-			<a href="/venues/{{ venue.id }}">
-				<i class="fas fa-music"></i>
 				<div class="item">
-					<h5>{{ venue.name }}</h5>
+					<tr>
+						
+						<td><i class="fas fa-music"></i> </td>
+						<td><h5><a href="/venues/{{ venue.id }}"></a> {{ venue.name }}</h5></td>
+						<td><button class="delete-button" data-id="{{ venue.id }}">&cross;</button></td>
+					</tr>
 				</div>
-			</a>
+			</a>				
 		</li>
+		
 		{% endfor %}
 	</ul>
 {% endfor %}
+<script>
+	function DeleteButtonClicked(button) {
+	  button.onclick = event => {
+		console.log('delete button click event', event);
+		console.log('delete button id', event.target.dataset.id);
+		const venueId = event.target.dataset.id;
+		fetch('/venues/' + venueId, {
+		  method: 'DELETE',
+		})
+		.then(() => window.location = '/')
+	  }
+	}
+	const delete_buttons = document.querySelectorAll('.delete-button');
+	delete_buttons.forEach(DeleteButtonClicked)
+  </script>
 {% endblock %}
