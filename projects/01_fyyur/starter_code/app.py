@@ -25,7 +25,7 @@ db = SQLAlchemy(app)
 #connect to a local postgresql database
 migrate = Migrate(app, db)
 
-from models import *
+
 #----------------------------------------------------------------------------#
 # Filters.
 #----------------------------------------------------------------------------#
@@ -48,15 +48,16 @@ app.jinja_env.filters['datetime'] = format_datetime
 def index():
   return render_template('pages/home.html')
 
-
-#  Venues
+#####
+from models import *
+#####
+# ----------------------------------------------------------------- 
+# Venues
 #  ----------------------------------------------------------------
 
 @app.route('/venues')
 def venues():
-  # TODO: replace with real venues data.
-  #       num_shows should be aggregated based on number of upcoming shows per venue.
-  
+
   data=[]
   venues=Venue.query.all()
   places=Venue.query.distinct(Venue.city, Venue.state).all()
@@ -74,28 +75,8 @@ def venues():
           venue.city==place.city and venue.state ==place.state
       ]
     })
-  # data=[{
-  #   "city": "San Francisco",
-  #   "state": "CA",
-  #   "venues": [{
-  #     "id": 1,
-  #     "name": "The Musical Hop",
-  #     "num_upcoming_shows": 0,
-  #   }, {
-  #     "id": 3,
-  #     "name": "Park Square Live Music & Coffee",
-  #     "num_upcoming_shows": 1,
-  #   }]
-  # }, {
-  #   "city": "New York",
-  #   "state": "NY",
-  #   "venues": [{
-  #     "id": 2,
-  #     "name": "The Dueling Pianos Bar",
-  #     "num_upcoming_shows": 0,
-  #   }]
-  # }]
-  return render_template('pages/venues.html', areas=data);
+
+  return render_template('pages/venues.html', areas=data)
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
@@ -229,17 +210,9 @@ def delete_venue(venue_id):
 #  ----------------------------------------------------------------
 @app.route('/artists')
 def artists():
-  # TODO: replace with real data returned from querying the database
-  data=[{
-    "id": 4,
-    "name": "Guns N Petals",
-  }, {
-    "id": 5,
-    "name": "Matt Quevedo",
-  }, {
-    "id": 6,
-    "name": "The Wild Sax Band",
-  }]
+  #artists query
+  data=Artist.query.all()
+ 
   return render_template('pages/artists.html', artists=data)
 
 @app.route('/artists/search', methods=['POST'])
