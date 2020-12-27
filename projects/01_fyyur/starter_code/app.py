@@ -240,10 +240,16 @@ def show_artist(artist_id):
 def edit_artist(artist_id):
   artist=Artist.query.get(artist_id)  
   form = ArtistForm()
-  
+  #prepopulate form with the artist data
+  form.name.data = artist.name
+  form.city.data = artist.city
+  form.state.data = artist.state
+  form.phone.data = artist.phone
+  form.genres.data = artist.genres
+  form.facebook_link.data = artist.facebook_link
   
   # TODO: populate form with fields from artist with ID <artist_id>
-  return render_template('forms/edit_artist.html', form=form, artist=artist)
+  return render_template('forms/edit_artist.html', form=form, artist=artists)
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
