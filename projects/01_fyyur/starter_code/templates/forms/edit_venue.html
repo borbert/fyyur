@@ -46,7 +46,7 @@
       console.log('edit button id', event.target.dataset.id);
       const venueId = event.target.dataset.id;
       fetch('/venues/' + venueId, {
-        method: 'UPDATE',
+        method: 'PUT',
       })
       .then(() => window.location = '/veneus/<venueId>')
       }

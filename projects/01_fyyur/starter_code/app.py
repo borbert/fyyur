@@ -269,7 +269,7 @@ def edit_artist_submission(artist_id):
       artist.genres=form.genres.data
       artist.facebook_link=form.facebook_link.data
 
-      db.session.update(artist)
+      # Artist.update(artist)
       db.session.commit()
     
     except Exception as e:
@@ -334,7 +334,7 @@ def edit_venue_submission(venue_id):
       venue.seeking_description  = form.seeking_description.data 
       venue.image_link =  form.image_link.data 
 
-      db.session.update(venue)
+      # Venue.update(venue)
       db.session.commit()
     
     except Exception as e:

@@ -2,7 +2,7 @@
 {% block title %}Edit Artist{% endblock %}
 {% block content %}
   <div class="form-wrapper">
-    <form class="form" method="post" action="/artists/{{artist.id}}/edit">
+    <form class="form" method="post" action="/artists/{{artist.id}}/edit" >
       <h3 class="form-heading">Edit artist <em>{{ artist.name }}</em></h3>
       <div class="form-group">
         <label for="name">Name</label>
@@ -38,13 +38,31 @@
   </div>
   <script>
 
+    // document.getElementById('form').onsubmit = function(e){
+    //   e.preventDefault();
+    //   fetch('/artist/' + artistId + 'edit', {
+
+    //     method:'POST',
+    //     body: JSON.stringify({
+    //       'description': document.getElementById('description').value
+    //     }),
+    //     headers: {
+    //       'Content-Type': 'application/json'
+    //     }
+    //   }
+    //   )
+    //   .then(function(response){ 
+    //     return reponse.json();
+    //   })
+    // }
+
     function editButtonClicked(button) {
       button.onclick = event => {
       console.log('edit button click event', event);
       console.log('edit button id', event.target.dataset.id);
       const artistId = event.target.dataset.id;
       fetch('/artist/' + artistId, {
-        method: 'DELETE',
+        method: 'PUT',
       })
       .then(() => window.location = '/')
       }
