@@ -8,7 +8,6 @@
 		<li>
 				<div class="item">
 					<tr>
-						
 						<td><i class="fas fa-music"></i> </td>
 						<td><h5><a href="/venues/{{ venue.id }}"></a> {{ venue.name }}</h5></td>
 						<td><button class="delete-button" data-id="{{ venue.id }}">&cross;</button></td>
@@ -21,6 +20,7 @@
 	</ul>
 {% endfor %}
 <script>
+
 	function DeleteButtonClicked(button) {
 	  button.onclick = event => {
 		console.log('delete button click event', event);
@@ -34,5 +34,16 @@
 	}
 	const delete_buttons = document.querySelectorAll('.delete-button');
 	delete_buttons.forEach(DeleteButtonClicked)
+
+	// <script>
+    // // edit venue / artist
+    // const editButton = document.querySelector('.edit-button');
+    
+    // editButton.onclick = function(e) {
+    //     const endpoint = e.target.value;
+    //     const editItemId = e.target.dataset['id'];
+    //     location.href = '/' + endpoint + '/' + editItemId + '/edit'
+    //   }
+  </script>
   </script>
 {% endblock %}
