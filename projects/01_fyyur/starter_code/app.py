@@ -271,22 +271,6 @@ def show_artist(artist_id):
       ).all()
     )
 
-  # for show in artist.shows:
-  #     venue = Venue.query.get(show.venue_id)
-  #     show_details = {
-  #         'venue_id': show.venue_id,
-  #         'venue_name': venue.name,
-  #         'venue_image_link': venue.image_link,
-  #         'start_time': show.start_time.strftime('%m/%d/%Y %H:%M')
-  #     }
-  #     if show.start_time < curr_date:
-  #         artist.past_shows.append(show_details)
-  #     else:
-  #         artist.upcoming_shows.append(show_details)
-
-  # setattr(artist, 'past_shows_count', len(artist.past_shows))
-  # setattr(artist, 'upcoming_shows_count', len(artist.upcoming_shows))
-
   data = {
             "id": artist.id,
             "name": artist.name,
