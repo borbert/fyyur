@@ -432,10 +432,11 @@ def create_artist_form():
 def create_artist_submission():
   # called upon submitting the new artist listing form --works
   error=False
-  
+
+  form=ArtistForm(request.form)
   try:
-      artist=Artist(**request.form)
-      
+      artist=Artist()
+      form.populate_obj(artist)
       db.session.add(artist)
       db.session.commit()
 
@@ -487,12 +488,13 @@ def create_show_submission():
   # called to create new shows in the db, upon submitting new show listing form
   error = False
 
-  data = request.form.to_dict()
   format = '%Y-%m-%d %H:%M:%S'
-  data['start_time'] = datetime.strptime(data['start_time'], format)
-
+  
+  form=ShowForm(request.form)
   try:
-      show = Show(**data)
+      show = Show()
+      form.populate_obj(show)
+      # show['start_time'] = datetime.strptime(data['start_time'], format)
       db.session.add(show)
       db.session.commit()
   except Exception as e:
@@ -504,8 +506,8 @@ def create_show_submission():
 
   if error:
     flash(
-      f'An error occured during insert'
-      f'Show could not be added'
+      f'An error occured during insert '
+      f'Show could not be added '
       'error'
     )
   else:
