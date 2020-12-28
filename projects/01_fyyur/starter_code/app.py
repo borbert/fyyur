@@ -4,7 +4,15 @@
 import json
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import (
+  Flask, 
+  render_template, 
+  request, 
+  Response, 
+  flash, 
+  redirect, 
+  url_for
+  )
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -12,6 +20,7 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
+from models import *
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -48,9 +57,7 @@ app.jinja_env.filters['datetime'] = format_datetime
 def index():
   return render_template('pages/home.html')
 
-#####
-from models import *
-#####
+
 # ----------------------------------------------------------------- 
 # Venues
 #  ----------------------------------------------------------------
@@ -84,7 +91,7 @@ def search_venues():
   # seach for Hop should return "The Musical Hop".
   # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
   search=request.form.get('search_term')
-  venues=Venue.query.filter(Venue.name.ilike(f'%{search}%')).all()
+  venues=Venue.query.filter(Venue.name.ilike(f"%{search}%")).all()
   response={'count':len(venues),'data':venues}
 
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
@@ -92,26 +99,42 @@ def search_venues():
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
   # shows the venue page with the given venue_id
-  venue=Venue.query.get(venue_id)
-  #get the current date for comparisons
-  curr_date=datetime.now()
-  #creating attributes that are lists of shows
+  venue=Venue.query.filter_by(id=venue_id).first_or_404()
+  #create new attributes for past and upcoming shows
   setattr(venue,'past_shows',[])
   setattr(venue,'upcoming_shows',[])
 
-  for show in venue.shows:
-    artist=Artist.query.get(show.artist_id)
-    show_details={
-      'artist_id': show.artist_id,
-      'artist_name': artist.name,
-      'artist_image_link': artist.image_link,
-      'start_time': str(show.start_time) #had to conver to a string datetime object was causing an issue with jinja injection,
-    }
+  past_shows=(
+    db.session.query(Artist, Show).join(Show).join(Venue). \
+      filter(
+        Show.venue_id == venue_id,
+        Show.artist_id == Artist.id,
+        Show.start_time < datetime.now()
+      ).all()
+    )
+
+  upcoming_shows=(
+    db.session.query(Artist, Show).join(Show).join(Venue). \
+      filter(
+        Show.venue_id == venue_id,
+        Show.artist_id == Artist.id,
+        Show.start_time >= datetime.now()
+      ).all()
+    )
+
+  # for show in venue.shows:
+  #   artist=Artist.query.get(show.artist_id)
+  #   show_details={
+  #     'artist_id': show.artist_id,
+  #     'artist_name': artist.name,
+  #     'artist_image_link': artist.image_link,
+  #     'start_time': show.start_time.strftime('%m/%d/%Y %H:%M')
+  #   }
     
-    if show.start_time < curr_date:
-      venue.past_shows.append(show_details)
-    else:
-      venue.upcoming_shows.append(show_details)
+  #   if show.start_time < curr_date:
+  #     venue.past_shows.append(show_details)
+  #   else:
+  #     venue.upcoming_shows.append(show_details)
 
   setattr(venue,'past_shows_count',len(venue.past_shows))
   setattr(venue,'upcoming_shows_count',len(venue.upcoming_shows))
@@ -222,7 +245,7 @@ def show_artist(artist_id):
           'venue_id': show.venue_id,
           'venue_name': venue.name,
           'venue_image_link': venue.image_link,
-          'start_time': str(show.start_time)#had to conver to a string datetime object was causing an issue with jinja injection
+          'start_time': show.start_time.strftime('%m/%d/%Y %H:%M')
       }
       if show.start_time < curr_date:
           artist.past_shows.append(show_details)
@@ -302,10 +325,10 @@ def edit_venue(venue_id):
   form.city.data =  venue.city
   form.state.data =  venue.state
   form.phone.data =  venue.phone
-  # form.website.data =  venue.website
+  form.website.data =  venue.website
   form.facebook_link.data =  venue.facebook_link
-  # form.seeking_talent.data =  venue.seeking_talent
-  # form.seeking_description.data =  venue.seeking_description
+  form.seeking_talent.data =  venue.seeking_talent
+  form.seeking_description.data =  venue.seeking_description
   form.image_link.data =  venue.image_link
 
   return render_template('forms/edit_venue.html', form=form, venue=venue)
