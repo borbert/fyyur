@@ -36,7 +36,22 @@
           <label for="facebook_link">Facebook Link</label>
           {{ form.facebook_link(class_ = 'form-control', placeholder='http://', id=form.facebook_link, autofocus = true) }}
         </div>
-      <input type="submit" value="Edit Venue" class="btn btn-primary btn-lg btn-block">
+      <input type="submit" value="Edit Venue" id='edit-button' class="btn btn-primary btn-lg btn-block">
     </form>
   </div>
+  <script>
+    function editButtonClicked(button) {
+      button.onclick = event => {
+      console.log('edit button click event', event);
+      console.log('edit button id', event.target.dataset.id);
+      const venueId = event.target.dataset.id;
+      fetch('/venues/' + venueId, {
+        method: 'UPDATE',
+      })
+      .then(() => window.location = '/veneus/<venueId>')
+      }
+    }
+    const edit_buttons = document.querySelectorAll('.edit-button');
+    edit_buttons.forEach(editButtonClicked)
+    </script>
 {% endblock %}

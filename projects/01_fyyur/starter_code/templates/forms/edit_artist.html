@@ -36,4 +36,22 @@
     </form>
     
   </div>
+  <script>
+
+    function editButtonClicked(button) {
+      button.onclick = event => {
+      console.log('edit button click event', event);
+      console.log('edit button id', event.target.dataset.id);
+      const artistId = event.target.dataset.id;
+      fetch('/artist/' + artistId, {
+        method: 'DELETE',
+      })
+      .then(() => window.location = '/')
+      }
+    }
+    const edit_buttons = document.querySelectorAll('.edit-button');
+    edit_buttons.forEach(editButtonClicked)
+  
+    
+    </script>
 {% endblock %}

@@ -255,10 +255,10 @@ def edit_artist_submission(artist_id):
   # take values from the form submitted, and update existing
   # artist record with ID <artist_id> using the new attributes
   error=False
-
-  artist=Artist.query.first_or_404(artist_id)
+  
+  artist=Artist.query.get(artist_id)
   form=ArtistForm(request.form)
-
+  
   if form.validate():
 
     try:
@@ -269,7 +269,7 @@ def edit_artist_submission(artist_id):
       artist.genres=form.genres.data
       artist.facebook_link=form.facebook_link.data
 
-      # Artist.update(artist)
+      db.session.update(artist)
       db.session.commit()
     
     except Exception as e:
@@ -296,24 +296,64 @@ def edit_venue(venue_id):
   venue=Venue.query.get(venue_id)
   form = VenueForm()
 
-  form.name.data = venue.name
-  form.genres.data = venue.genres
-  form.address.data = venue.address
-  form.city.data = venue.city
-  form.state.data = venue.state
-  form.phone.data = venue.phone
-  form.website.data = venue.website
-  form.facebook_link.data = venue.facebook_link
-  form.seeking_talent.data = venue.seeking_talent
-  form.seeking_description.data = venue.seeking_description
-  form.image_link.data = venue.image_link
+  form.name.data =  venue.name
+  form.genres.data =  venue.genres
+  form.address.data =  venue.address
+  form.city.data =  venue.city
+  form.state.data =  venue.state
+  form.phone.data =  venue.phone
+  # form.website.data =  venue.website
+  form.facebook_link.data =  venue.facebook_link
+  # form.seeking_talent.data =  venue.seeking_talent
+  # form.seeking_description.data =  venue.seeking_description
+  form.image_link.data =  venue.image_link
 
   return render_template('forms/edit_venue.html', form=form, venue=venue)
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
-  # TODO: take values from the form submitted, and update existing
+  # take values from the form submitted, and update existing
   # venue record with ID <venue_id> using the new attributes
+  error=False
+  
+  venue=Venue.query.get(venue_id)
+  form=VenueForm(request.form)
+  
+  if form.validate():
+
+    try:
+      venue.name = form.name.data
+      venue.genres = form.genres.data 
+      venue.address = form.address.data 
+      venue.city = form.city.data 
+      venue.state = form.state.data 
+      venue.phone = form.phone.data 
+      venue.website = form.website.data 
+      venue.facebook_link = form.facebook_link.data 
+      venue.seeking_talent  =  form.seeking_talent.data
+      venue.seeking_description  = form.seeking_description.data 
+      venue.image_link =  form.image_link.data 
+
+      db.session.update(venue)
+      db.session.commit()
+    
+    except Exception as e:
+      error=True
+      print(f'Exception occured -- {e}')
+      print(sys.exc_info())
+      db.session.rollback()
+    finally:
+      db.session.close()
+  
+  if error:
+    flash(
+      f'An error occured during update'
+      f'Artist {venue.name} could not be updated'
+      f'{form.errors}'
+    )
+  else:
+    flash(f'Artist {venue.name} was successfully updated!')
+  
   return redirect(url_for('show_venue', venue_id=venue_id))
 
 #  Create Artist
@@ -326,14 +366,33 @@ def create_artist_form():
 
 @app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
-  # called upon submitting the new artist listing form
-  # TODO: insert form data as a new Venue record in the db, instead
-  # TODO: modify data to be the data object returned from db insertion
+  # called upon submitting the new artist listing form --works
+  error=False
+  
+  try:
+      artist=Artist(**request.form)
+      
+      db.session.add(artist)
+      db.session.commit()
 
-  # on successful db insert, flash success
-  flash('Artist ' + request.form['name'] + ' was successfully listed!')
-  # TODO: on unsuccessful db insert, flash an error instead.
-  # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
+  except Exception as e:
+    error=True
+    db.session.rollback()
+    print(f'Exception occured -- {e}')
+
+  finally:
+    db.session.close()
+
+  if error:
+    flash(
+      f'An error occured during insert'
+      f'Artist {request.form["name"]} could not be added'
+      'error'
+    )
+  else:
+    # on successful db insert, flash success
+    flash('Artist ' + request.form['name'] + ' was successfully listed!')
+
   return render_template('pages/home.html')
 
 
