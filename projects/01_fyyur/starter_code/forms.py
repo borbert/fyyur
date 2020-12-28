@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask_wtf import Form
+from flask_wtf import FlaskForm as Form
 from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, BooleanField 
 from wtforms_alchemy import PhoneNumberField
 from wtforms.validators import DataRequired, AnyOf, URL
@@ -218,4 +218,6 @@ class ArtistForm(Form):
     facebook_link = StringField(
         'facebook_link', validators=[URL()]
     )
+    seeking_venue = BooleanField('Seeking Venue?')
+    seeking_description = StringField('Venue Description?')
 
