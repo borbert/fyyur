@@ -122,24 +122,37 @@ def show_venue(venue_id):
       ).all()
     )
 
-  # for show in venue.shows:
-  #   artist=Artist.query.get(show.artist_id)
-  #   show_details={
-  #     'artist_id': show.artist_id,
-  #     'artist_name': artist.name,
-  #     'artist_image_link': artist.image_link,
-  #     'start_time': show.start_time.strftime('%m/%d/%Y %H:%M')
-  #   }
-    
-  #   if show.start_time < curr_date:
-  #     venue.past_shows.append(show_details)
-  #   else:
-  #     venue.upcoming_shows.append(show_details)
+  data = {
+            "id": venue.id,
+            "name": venue.name,
+            "genres": venue.genres,
+            "address": venue.address,
+            "city": venue.city,
+            "state": venue.state,
+            "phone": venue.phone,
+            "facebook_link": venue.facebook_link,
+            "website": venue.website,
+            "image_link": venue.image_link,
+            "seeking_talent": venue.seeking_talent,
+            "seeking_description": venue.seeking_description,
+            "upcoming_shows_count": len(upcoming_shows),
+            "upcoming_shows":  [{
+                                  'artist_id': artist.id,
+                                  'artist_name': artist.name,
+                                  'artist_image_link': artist.image_link,
+                                  'start_time': show.start_time.strftime("%m/%d/%Y, %H:%M")
+                              } for artist, show in upcoming_shows],
+            "past_shows": [{
+                                'artist_id': artist.id,
+                                "artist_name": artist.name,
+                                "artist_image_link": artist.image_link,
+                                "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
+                            } for artist, show in past_shows],
+            "past_shows_count": len(past_shows),
 
-  setattr(venue,'past_shows_count',len(venue.past_shows))
-  setattr(venue,'upcoming_shows_count',len(venue.upcoming_shows))
+        }
   
-  return render_template('pages/show_venue.html', venue=venue)
+  return render_template('pages/show_venue.html', venue=data)
 
 #  Create Venue
 #  ----------------------------------------------------------------
