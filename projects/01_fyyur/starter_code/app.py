@@ -165,14 +165,10 @@ def create_venue_form():
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
   error=False
-  
+  form = VenueForm(request.form)
   try:
-      venue=Venue(**request.form)
-      if venue.seeking_talent =='y':
-        venue.seeking_talent=True
-      else:
-        venue.seeking_talent=False
-      
+      venue=Venue()
+      form.populate_obj(venue)
       db.session.add(venue)
       db.session.commit()
 
