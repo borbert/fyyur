@@ -3,6 +3,7 @@ from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
+from sqlalchemy import func
 
 from models import setup_db, Question, Category
 
@@ -135,7 +136,7 @@ def create_app(test_config=None):
   It should return any questions for whom the search term 
   is a substring of the question. 
   '''
-  @app.route('/questions/search', methods={'POST'})
+  @app.route('/questions/search', methods=['POST'])
   def search_questions():
     request_body = request.get_json()
     search_term = request_body.get('search_term')
@@ -202,53 +203,50 @@ def create_app(test_config=None):
   and return a random questions within the given category, 
   if provided, and that is not one of the previous questions. 
   '''
-  @app.route('/quizzes')
+  @app.route('/quizzes', methods=['POST'])
   def play_quiz():
     '''take a quiz in the trivia game'''
-    try:
-      request_body = rquest.body.json()
-      if request_body:
-        # must use valid json
+    # load the request body
+    body = request.get_json()
+    if not body:
+        # posting an envalid json should return a 400 error.
         abort(400)
-      if 'previous_questions' not in request_body \
-              or 'quiz_category' not in request_body \
-              or 'id' not in request_body['quiz_category']:
-              # response must have all of these
-          raise TypeError
-      
-      previous_questions = request_body['previous_questions']
-      category_id = request_body['quiz_category']['id']
-      # find questions that have not been seen already
-      questions_query = Question.query.with_entities(Question.id) \
-        .filter(Question.id.notin(previous_questions))
-      # as long as category is valid 
-      if category_id != 0:
-        questions = questions_query.filter(Question.category == str(category_id))
-      
-      questions = questions.order_by(Quesiton.id).all()
-      question_ids = [q.id for q in questions_query]
-      # what to return if there are no questions
-      if len(question_ids) == 0:
-        return jsonify(
-          {
-            'question':None
-          }
-        ), 200
-      # randomly pick a new question
-      random_question = random.choice(question_ids)
-      next_question = Question.query.get(random_question_id).format()
-      # return next question
-      return jsonify(
-        {
-          'question': next_question
-        }, 200
-      )
- 
-    except TypeError:
-      abort(400)
+    if (body.get('previous_questions') is None or body.get('quiz_category') is None):
+        # if previous_questions or quiz_category are missing, return a 400 error
+        abort(400)
+    previous_questions = body.get('previous_questions')
+    if type(previous_questions) != list:
+        # previous_questions should be a list, otherwise return a 400 error
+        abort(400)
+    category = body.get('quiz_category')
+    # just incase, convert category id to integer
+    category_id = int(category['id'])
+    # insure that there are questions to be played.
+    if category_id == 0:
+        # if category id is 0, query the database for a random object of all questions
+        selection = Question.query.order_by(func.random())
+    else:
+        # load a random object of questions from the specified category
+        selection = Question.query.filter(
+            Question.category == category_id).order_by(func.random())
+    if not selection.all():
+        # No questions available, abort with a 404 error
+        abort(404)
+    else:
+        # load a random question from our previous query, which is not in the previous_questions list.
+        question = selection.filter(Question.id.notin_(
+            previous_questions)).first()
+    if question is None:
+        # all questions were played, returning a success message without a question signifies the end of the game
+        return jsonify({
+            'success': True
+        })
+    # Found a question that wasn't played before, let's return it to the user
+    return jsonify({
+        'success': True,
+        'question': question.format()
+    })
 
-    except:
-      aabort(500)
 
 
 

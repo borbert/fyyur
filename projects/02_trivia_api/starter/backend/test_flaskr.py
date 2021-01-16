@@ -139,6 +139,29 @@ class TriviaTestCase(unittest.TestCase):
         for question in data['questions']:
             self.assertEqual(question['category'], category.id)
 
+    def test_play_quiz(self):
+        '''
+        TEST: In the "Play" tab, after a user selects "All" or a category,
+        one question at a time is displayed, the user is allowed to answer
+        and shown whether they were correct or not. 
+        '''
+        # query db for 2 random questions
+        questions = Question.query.order_by(func.random()).limit(2).all()
+        previous_questions = [question.id for question in questions]
+        # post response json, then load the data
+        response = self.client().post('/quizzes', json={
+            'previous_questions': previous_questions,
+            'quiz_category': {'id': 2}
+        })
+        data = json.loads(response.data)
+        # status code should be 200
+        self.assertEqual(response.status_code, 200)
+        # success should be true
+        self.assertTrue(data['success'])
+        # question should be present
+        self.assertTrue(data['question'])
+
+
 # Make the tests conveniently executable
 if __name__ == "__main__":
     unittest.main()
