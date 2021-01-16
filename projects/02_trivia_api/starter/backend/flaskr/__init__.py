@@ -8,13 +8,16 @@ from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
 
+'''
+Create and setup flask app and init db
+'''
 def create_app(test_config=None):
   # create and configure the app
   app = Flask(__name__)
   setup_db(app)
   CORS(app)
 
-    # CORS Headers 
+  # CORS Headers 
   @app.after_request
   def after_request(response):
       response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,true')
@@ -22,59 +25,149 @@ def create_app(test_config=None):
       return response
 
   '''
-  @TODO: 
-  Create an endpoint to handle GET requests 
-  for all available categories.
+  Endpoint to handle GET requests for all available categories.
   '''
-  @app.route('/')
+  @app.route('/categories', methods=['GET'])
   def get_all_categories():
-    categories=Category.query.all()
-    return jsonify(categories)
-
-
+    #take all categories from DB and format them
+    categories=[category.format() for category in Category.query.all()]
+    return jsonify({
+      'success':True,
+      'categories':categories,
+      'total_categories':len(categories)
+    })
 
   '''
-  @TODO: 
-  Create an endpoint to handle GET requests for questions, 
+  Endpoint to handle GET requests for questions, 
   including pagination (every 10 questions). 
   This endpoint should return a list of questions, 
   number of total questions, current category, categories. 
-
-  TEST: At this point, when you start the application
-  you should see questions and categories generated,
-  ten questions per page and pagination at the bottom of the screen for three pages.
-  Clicking on the page numbers should update the questions. 
   '''
+  @app.route('/questions',methods=['GET'])
+  def get_questions():
+    '''
+    Get all questions
+    '''
+    # paginate questions, and store the current page questions in a list
+    page = request.args.get('page', 1, type=int)
+    selection = Question.query.order_by(Question.id).paginate(page, QUESTIONS_PER_PAGE, True)
+    total_questions = selection.total
+    
+    if total_questions == 0:
+        # no questions are found, abort with a 404 error.
+        abort(404)
+    
+    current_questions = [question.format() for question in selection.items]
+    # load all categories from db
+    categories=[category.format() for category in Category.query.all()]
+    
+    return jsonify({
+        'success': True,
+        'questions': current_questions,
+        'total_questions': total_questions,
+        'categories': categories
+    })
+
 
   '''
-  @TODO: 
   Create an endpoint to DELETE question using a question ID. 
-
-  TEST: When you click the trash icon next to a question, the question will be removed.
-  This removal will persist in the database and when you refresh the page. 
   '''
+  @app.route('/questions/<question_id>', methods=['Delete'])
+  def delete_question(question_id):
+    '''Delete a question from the database'''
+    try:
+        question = Question.query.filter(Question.id == question_id).one_or_none()
+        # return 404 if question is not available
+        if question is None:
+            abort(404)
+        
+        question.delete()
+        
+        return jsonify({
+            'success': True,
+            'deleted': question_id
+        })
+    except:
+        # rollback and close the connection
+        db.session.rollback()
+        abort(422)
 
   '''
-  @TODO: 
-  Create an endpoint to POST a new question, 
-  which will require the question and answer text, 
-  category, and difficulty score.
-
-  TEST: When you submit a question on the "Add" tab, 
-  the form will clear and the question will appear at the end of the last page
-  of the questions list in the "List" tab.  
+  Endpoint to POST a new question, 
+  which will require the question and answer text, category, and difficulty score.
   '''
+  @app.route('/questions', methods=['POST'])
+  def create_questions():
+    try:
+      request_body = request.get_json()
+      # needs to have a body 
+      if not request_body:
+        abort(400)
+      # extract data from body for question
+      new_question = Question(
+          request_body['question'],
+          request_body['answer'],
+          request_body['category'],
+          request_body['difficulty']
+      )
+      # QA check on difficulty
+      if not 1 <= int(request_body['difficulty']) < 6:
+        abort(400)
+      # validating that the quesiton and answer must be present
+      if request_body['question'] == '' or request_body['answer'] == '':
+        raise TypeError
+      # insert the new question
+      new_question.insert()
+
+      return jsonify({
+          'success': True
+      }), 201
+
+    except TypeError:
+        abort(422)
+
+    except:
+        abort(500)
+
 
   '''
-  @TODO: 
-  Create a POST endpoint to get questions based on a search term. 
+  Endpoint to get questions based on a search term. 
   It should return any questions for whom the search term 
   is a substring of the question. 
-
-  TEST: Search by any phrase. The questions list will update to include 
-  only question that include that string within their question. 
-  Try using the word "title" to start. 
   '''
+  @app.route('/questions/search', methods={'POST'})
+  def search_questions():
+    request_body = request.get_json()
+    search_term = request_body.get('search_term')
+    current_category = request_body.get('current_category') 
+    
+    if not request_body:
+      # body should have valid json
+      abort(400)
+
+    if search_term: 
+      #query db for the paginated results
+      page = request.args.get('page', 1, type=int)
+      results = Question.query.filter(
+            Question.question.ilike(f'%{search_term}%')).paginate(page, QUESTIONS_PER_PAGE, True)
+      total_questions = results.total
+      
+      if total_questions == 0:
+        # no questions returned from db
+        abort(404)
+      
+      current_questions = [question.format() for question in results.items]
+      
+      return jsonify({
+            'success': True,
+            'questions': current_questions,
+            'total_questions': total_questions,
+            'search_term': search_term
+        }), 200
+    else: 
+      # if no search term no search
+      abort(400)
+
 
   '''
   @TODO: 
