@@ -31,12 +31,31 @@ def create_app(test_config=None):
   @app.route('/categories', methods=['GET'])
   def get_all_categories():
     #take all categories from DB and format them
-    categories=[category.format() for category in Category.query.all()]
+    categories=get_category_list()
     return jsonify({
       'success':True,
       'categories':categories,
       'total_categories':len(categories)
     })
+  '''
+  Helper code to assist in loading quesitons
+  '''
+  def paginate_questions(request, questions_list):
+    page = request.args.get('page', 1, type=int)
+    start = (page - 1) * QUESTIONS_PER_PAGE
+    end = start + QUESTIONS_PER_PAGE
+
+    questions = [question.format() for question in questions_list]
+
+    paginated_questions = questions[start:end]
+
+    return paginated_questions
+
+  def get_category_list():
+      categories = {}
+      for category in Category.query.all():
+        categories[category.id] = category.type
+      return categories
 
   '''
   Endpoint to handle GET requests for questions, 
@@ -49,26 +68,25 @@ def create_app(test_config=None):
     '''
     Get all questions
     '''
-    # paginate questions, and store the current page questions in a list
-    page = request.args.get('page', 1, type=int)
-    selection = Question.query.order_by(Question.id).paginate(page, QUESTIONS_PER_PAGE, True)
-    total_questions = selection.total
-    
-    if total_questions == 0:
-        # no questions are found, abort with a 404 error.
-        abort(404)
-    
-    current_questions = [question.format() for question in selection.items]
-    # load all categories from db
-    categories=[category.format() for category in Category.query.all()]
-    
-    return jsonify({
-        'success': True,
-        'questions': current_questions,
-        'total_questions': total_questions,
-        'categories': categories
-    })
-
+    try:
+      # paginate questions, and store the current page questions in a list
+      questions_list = Question.query.all()
+      selection = paginate_questions(request, questions_list)
+      total_questions = len(selection)
+      
+      if total_questions == 0:
+          # no questions are found, abort with a 404 error.
+          abort(404)
+      
+      return jsonify({
+          'success': True,
+          'questions': selection,
+          'total_questions': total_questions,
+          'categories': get_category_list(),
+          'current_category': None
+      })
+    except:
+      print(sys.exc_info())
 
   '''
   Create an endpoint to DELETE question using a question ID. 
@@ -90,6 +108,7 @@ def create_app(test_config=None):
         })
     except:
         # rollback and close the connection
+        print(sys.exc_info())
         db.session.rollback()
         abort(422)
 
@@ -125,10 +144,12 @@ def create_app(test_config=None):
       }), 201
 
     except TypeError:
-        abort(422)
+      print(sys.exc_info())
+      abort(422)
 
     except:
-        abort(500)
+      print(sys.exc_info())
+      abort(500)
 
 
   '''
@@ -139,11 +160,12 @@ def create_app(test_config=None):
   @app.route('/questions/search', methods=['POST'])
   def search_questions():
     request_body = request.get_json()
-    search_term = request_body.get('search_term')
+    search_term = request_body.get('searchTerm')
     current_category = request_body.get('current_category') 
     
     if not request_body:
       # body should have valid json
+      print(sys.exc_info())
       abort(400)
 
     if search_term: 
@@ -155,6 +177,7 @@ def create_app(test_config=None):
       
       if total_questions == 0:
         # no questions returned from db
+        print(sys.exc_info())
         abort(404)
       
       current_questions = [question.format() for question in results.items]
@@ -163,10 +186,11 @@ def create_app(test_config=None):
             'success': True,
             'questions': current_questions,
             'total_questions': total_questions,
-            'search_term': search_term
+            'searchTerm': search_term
         }), 200
     else: 
       # if no search term no search
+      print(sys.exc_info())
       abort(400)
 
 
@@ -176,25 +200,57 @@ def create_app(test_config=None):
   @app.route('/categories/<category_id>/questions', methods=['GET'])
   def search_questions_by_category(category_id):
     '''Get all questions in a category'''
-    category = Category.query.filter(Category.id == category_id).one_or_none()
-    if category is None:
-      # abort is category is none
+    # category = Category.query.filter(Category.id == category_id).one_or_none()
+    # if category is None:
+    #   # abort is category is none
+    #   abort(404)
+    # # paginate questions, and store the current page questions in a list
+    # page = request.args.get('page', 1, type=int)
+    # results = Question.query.filter(Question.category == category.id).order_by(Question.id).paginate(page, QUESTIONS_PER_PAGE, True)
+
+    # total_questions = results.total
+    # current_questions = [question.format() for question in results.items]
+
+    # return jsonify(
+    #   {
+    #     'success':True,
+    #     'questions':current_questions,
+    #     'total_questions': total_questions,
+    #     'current_category': category.type
+    #   }
+    # ), 200
+    try:
+      questions_search_term = request.args.get('searchTerm', '')
+      questions_query = Question.query.filter(
+          Question.category == category_id,
+          Question.question.ilike("%{}%".format(questions_search_term))
+      ).order_by(Question.id).all()
+      questions_data = [question.format() for question in questions_query]
+
+      if len(questions_data) == 0:
+          raise IndexError
+
+      categories_query = Category.query.order_by(Category.id).all()
+      categories_data = {}
+
+      for category in categories_query:
+          categories_data[category.id] = category.type
+
+      return jsonify({
+          'questions': questions_data[:QUESTIONS_PER_PAGE],
+          'total_questions': len(questions_data),
+          'categories': categories_data,
+          'current_category': category_id,
+          'search_term': questions_search_term
+      }), 200
+
+    except IndexError:
+      print(sys.exc_info())
       abort(404)
-    # paginate questions, and store the current page questions in a list
-    page = request.args.get('page', 1, type=int)
-    results = Question.query.filter(Question.category == category.id).order_by(Question.id).paginate(page, QUESTIONS_PER_PAGE, True)
 
-    total_questions = results.total
-    current_questions = [question.format() for question in results.items]
-
-    return jsonify(
-      {
-        'success':True,
-        'questions':current_questions,
-        'total_questions': total_questions,
-        'current_category': category.type
-      }
-    ), 200
+    except:
+      print(sys.exc_info())
+      abort(500)
 
 
   '''
