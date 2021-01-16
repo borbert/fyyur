@@ -169,33 +169,103 @@ def create_app(test_config=None):
       abort(400)
 
 
+  ''' 
+  Endpoint to get questions based on category. 
   '''
-  @TODO: 
-  Create a GET endpoint to get questions based on category. 
+  @app.route('/categories/<category_id>/questions', methods=['GET'])
+  def search_questions_by_category(category_id):
+    '''Get all questions in a category'''
+    category = Category.query.filter(Category.id == category_id).one_or_none()
+    if category is None:
+      # abort is category is none
+      abort(404)
+    # paginate questions, and store the current page questions in a list
+    page = request.args.get('page', 1, type=int)
+    results = Question.query.filter(Question.category == category.id).order_by(Question.id).paginate(page, QUESTIONS_PER_PAGE, True)
 
-  TEST: In the "List" tab / main screen, clicking on one of the 
-  categories in the left column will cause only questions of that 
-  category to be shown. 
+    total_questions = results.total
+    current_questions = [question.format() for question in results.items]
+
+    return jsonify(
+      {
+        'success':True,
+        'questions':current_questions,
+        'total_questions': total_questions,
+        'current_category': category.type
+      }
+    ), 200
+
+
   '''
-
-
-  '''
-  @TODO: 
-  Create a POST endpoint to get questions to play the quiz. 
+  Endpoint to get questions to play the quiz. 
   This endpoint should take category and previous question parameters 
   and return a random questions within the given category, 
   if provided, and that is not one of the previous questions. 
+  '''
+  @app.route('/quizzes')
+  def play_quiz():
+    '''take a quiz in the trivia game'''
+    try:
+      request_body = rquest.body.json()
+      if request_body:
+        # must use valid json
+        abort(400)
+      if 'previous_questions' not in request_body \
+              or 'quiz_category' not in request_body \
+              or 'id' not in request_body['quiz_category']:
+              # response must have all of these
+          raise TypeError
+      
+      previous_questions = request_body['previous_questions']
+      category_id = request_body['quiz_category']['id']
+      # find questions that have not been seen already
+      questions_query = Question.query.with_entities(Question.id) \
+        .filter(Question.id.notin(previous_questions))
+      # as long as category is valid 
+      if category_id != 0:
+        questions = questions_query.filter(Question.category == str(category_id))
+      
+      questions = questions.order_by(Quesiton.id).all()
+      question_ids = [q.id for q in questions_query]
+      # what to return if there are no questions
+      if len(question_ids) == 0:
+        return jsonify(
+          {
+            'question':None
+          }
+        ), 200
+      # randomly pick a new question
+      random_question = random.choice(question_ids)
+      next_question = Question.query.get(random_question_id).format()
+      # return next question
+      return jsonify(
+        {
+          'question': next_question
+        }, 200
+      )
+ 
+    except TypeError:
+      abort(400)
 
-  TEST: In the "Play" tab, after a user selects "All" or a category,
-  one question at a time is displayed, the user is allowed to answer
-  and shown whether they were correct or not. 
-  '''
+    except:
+      aabort(500)
+
+
 
   '''
-  @TODO: 
-  Create error handlers for all expected errors 
-  including 404 and 422. 
+  Error handlers for all expected errors 
   '''
+  @app.errorhandler(400)
+  @app.errorhandler(404)
+  @app.errorhandler(405)
+  @app.errorhandler(422)
+  @app.errorhandler(500)
+  def error_handler(error):
+      return jsonify({
+          'success': False,
+          'error': error.code,
+          'message': error.description
+      }), error.code
   
   return app
 

@@ -1,7 +1,9 @@
 import os
 import unittest
 import json
+
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 
 from flaskr import create_app
 from models import setup_db, Question, Category
@@ -107,6 +109,35 @@ class TriviaTestCase(unittest.TestCase):
         # total_questions should be an integer
         self.assertEqual(type(data['total_questions']), int)
     
+    def test_search_questions_by_category(self):
+        '''
+        TEST: In the "List" tab / main screen, clicking on one of the 
+        categories in the left column will cause only questions of that 
+        category to be shown. 
+        '''
+        # get the first random category from db
+        category = Category.query.order_by(func.random()).first()
+        # get response json, then load the data
+        response = self.client().get(
+            f'/categories/{category.id}/questions')
+        data = json.loads(response.data)
+        # status code should be 200
+        self.assertEqual(response.status_code, 200)
+        # success should be true
+        self.assertTrue(data['success'])
+        # questions and total_questions should be present
+        self.assertIn('questions', data)
+        self.assertIn('total_questions', data)
+        # questions and total_questions length should be more than 0
+        self.assertGreater(len(data['questions']), 0)
+        self.assertGreater(data['total_questions'], 0)
+        # total_questions should be an integer
+        self.assertEqual(type(data['total_questions']), int)
+        # current_category equals to category.type
+        self.assertEqual(data['current_category'], category.type)
+        # for each question, category id should be the same id from db
+        for question in data['questions']:
+            self.assertEqual(question['category'], category.id)
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
