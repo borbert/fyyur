@@ -16,7 +16,7 @@ CORS(app)
 !! NOTE THIS WILL DROP ALL RECORDS AND START YOUR DB FROM SCRATCH
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 '''
-# db_drop_and_create_all()
+db_drop_and_create_all()
 
 # CORS Headers
 @app.after_request
@@ -65,7 +65,7 @@ def get_drinks_detail(payload):
 
     return jsonify({
         'success':True,
-        'drinks-detail':formatted_drinks
+        'drinks':formatted_drinks
     }), 200
 
 
