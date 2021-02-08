@@ -1,4 +1,4 @@
-import json
+import json, traceback
 from flask import request, _request_ctx_stack
 from functools import wraps
 from jose import jwt
@@ -7,7 +7,7 @@ from urllib.request import urlopen
 
 AUTH0_DOMAIN = 'fsnd-project3-borbert.us.auth0.com'
 ALGORITHMS = ['RS256']
-API_AUDIENCE = 'http://localhost:5000/'
+API_AUDIENCE = 'http://localhost:5000'
 
 ## AuthError Exception
 '''
@@ -32,28 +32,34 @@ implement get_token_auth_header() method
 '''
 def get_token_auth_header():
     auth_header=request.headers.get('Authorization', None)
+    # print(auth_header)
+    try:
+        if not auth_header:
+            raise AuthError({
+                'code': 'authorization_header_missing',
+                'description': 'Authorization header is expected.'
+            }, 401)
+        
+        header_parts = auth_header.split(" ")
 
-    if not auth_header:
-        raise AuthError({
-            'code': 'authorization_header_missing',
-            'description': 'Authorization header is expected.'
-        }, 401)
+        if header_parts[0].lower() != 'bearer':
+            raise AuthError({
+                'code': 'invalid_header',
+                'description': 'Authorization header must start with "Bearer".'
+            }, 401)
+
+        elif len(header_parts) != 2:
+            raise AuthError({
+                'code': 'invalid_header',
+                'description': 'Authorization header must be bearer token.'
+            }, 401)
+
+        token = header_parts[1]
+    except Exception as e:
+        traceback.print_exc()
     
-    header_parts = auth_header.split(" ")
-
-    if header_parts[0].lower() != 'bearer':
-        raise AuthError({
-            'code': 'invalid_header',
-            'description': 'Authorization header must start with "Bearer".'
-        }, 401)
-
-    elif len(header_parts) != 2:
-        raise AuthError({
-            'code': 'invalid_header',
-            'description': 'Authorization header must be bearer token.'
-        }, 401)
-
-    return header_parts[1]
+    # print(token)
+    return token
 
 '''
 implement check_permissions(permission, payload) method
@@ -66,19 +72,32 @@ implement check_permissions(permission, payload) method
     it should raise an AuthError if the requested permission string is not in the payload permissions array
     return true otherwise
 '''
-def check_permissions(permission, payload):
+def check_permissions(payload,permission):
     # raise Exception('Not Implemented')
-    if 'permissions' not in payload:
-        raise AuthError({
-            'code': 'invalid_claims',
-            'description': 'Permissions not included in JWT.'
-        }, 400)
+    # print(permission)
+    # print(payload)
+    try:
+        # if permission in payload.get('permissions'):
+        #     print('User has permission')
 
-    if permission not in payload['permissions']:
-        raise AuthError({
-            'code': 'unauthorized',
-            'description': 'Permission not found.'
-        }, 403)
+        if payload.get('permissions'):
+            permissions_scope = payload.get('permissions')
+
+            if permission not in permissions_scope:
+                raise AuthError({
+                    'code': 'unauthorized',
+                    'description': 'Permission not found.'
+                }, 403)
+
+        else:         
+            raise AuthError(
+            {
+                'code': 'invalid_claims',
+                'description': 'User does not have roles in JWT'
+            }, 401)
+    except Exception as e:
+        traceback.print_exc()
+
     return True
 
 '''
@@ -98,65 +117,70 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 def verify_decode_jwt(token):
-    # GET THE PUBLIC KEY FROM AUTH0
-    jsonurl = urlopen(f'https://{AUTH0_DOMAIN}/.well-known/jwks.json')
-    jwks = json.loads(jsonurl.read())
-    
-    # GET THE DATA IN THE HEADER
-    unverified_header = jwt.get_unverified_header(token)
-    
-    # CHOOSE OUR KEY
-    rsa_key = {}
-    if 'kid' not in unverified_header:
+    try:
+        # GET THE PUBLIC KEY FROM AUTH0
+        jsonurl = urlopen(f'https://{AUTH0_DOMAIN}/.well-known/jwks.json')
+        jwks = json.loads(jsonurl.read())
+        
+        # GET THE DATA IN THE HEADER
+        unverified_header = jwt.get_unverified_header(token)
+        
+        # CHOOSE OUR KEY
+        rsa_key = {}
+        if 'kid' not in unverified_header:
+            raise AuthError({
+                'code': 'invalid_header',
+                'description': 'Authorization malformed.'
+            }, 401)
+
+        for key in jwks['keys']:
+            if key['kid'] == unverified_header['kid']:
+                rsa_key = {
+                    'kty': key['kty'],
+                    'kid': key['kid'],
+                    'use': key['use'],
+                    'n': key['n'],
+                    'e': key['e']
+                }
+        
+        # Finally, verify!!!
+        if rsa_key:
+            try:
+                # USE THE KEY TO VALIDATE THE JWT
+                payload = jwt.decode(
+                    token,
+                    rsa_key,
+                    algorithms=ALGORITHMS,
+                    audience=API_AUDIENCE,
+                    issuer='https://' + AUTH0_DOMAIN + '/'
+                )
+
+                return payload
+
+            except jwt.ExpiredSignatureError:
+                raise AuthError({
+                    'code': 'token_expired',
+                    'description': 'Token expired.'
+                }, 401)
+
+            except jwt.JWTClaimsError:
+                raise AuthError({
+                    'code': 'invalid_claims',
+                    'description': 'Incorrect claims. Please, check the audience and issuer.'
+                }, 401)
+            except Exception as e:
+                traceback.print_exc()
+                raise AuthError({
+                    'code': 'invalid_header',
+                    'description': 'Unable to parse authentication token.'
+                }, 400)
+
         raise AuthError({
-            'code': 'invalid_header',
-            'description': 'Authorization malformed.'
-        }, 401)
-
-    for key in jwks['keys']:
-        if key['kid'] == unverified_header['kid']:
-            rsa_key = {
-                'kty': key['kty'],
-                'kid': key['kid'],
-                'use': key['use'],
-                'n': key['n'],
-                'e': key['e']
-            }
-    
-    # Finally, verify!!!
-    if rsa_key:
-        try:
-            # USE THE KEY TO VALIDATE THE JWT
-            payload = jwt.decode(
-                token,
-                rsa_key,
-                algorithms=ALGORITHMS,
-                audience=API_AUDIENCE,
-                issuer='https://' + AUTH0_DOMAIN + '/'
-            )
-
-            return payload
-
-        except jwt.ExpiredSignatureError:
-            raise AuthError({
-                'code': 'token_expired',
-                'description': 'Token expired.'
-            }, 401)
-
-        except jwt.JWTClaimsError:
-            raise AuthError({
-                'code': 'invalid_claims',
-                'description': 'Incorrect claims. Please, check the audience and issuer.'
-            }, 401)
-        except Exception:
-            raise AuthError({
-                'code': 'invalid_header',
-                'description': 'Unable to parse authentication token.'
-            }, 400)
-    raise AuthError({
-                'code': 'invalid_header',
-                'description': 'Unable to find the appropriate key.'
-            }, 400)
+                    'code': 'invalid_header',
+                    'description': 'Unable to find the appropriate key.'
+                }, 400)
+    except Exception as e:
+        traceback.print_exc()
 
 '''
 implement @requires_auth(permission) decorator method
@@ -174,7 +198,7 @@ def requires_auth(permission=''):
         def wrapper(*args, **kwargs):
             token = get_token_auth_header()
             payload = verify_decode_jwt(token)
-            check_permissions(permission, payload)
+            check_permissions(payload,permission)
             return f(payload, *args, **kwargs)
 
         return wrapper

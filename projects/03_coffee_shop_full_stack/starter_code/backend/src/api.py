@@ -16,7 +16,7 @@ CORS(app)
 !! NOTE THIS WILL DROP ALL RECORDS AND START YOUR DB FROM SCRATCH
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 '''
-db_drop_and_create_all()
+# db_drop_and_create_all()
 
 # CORS Headers
 @app.after_request
@@ -39,6 +39,8 @@ def get_drinks():
     drinks=Drink.query.all()
 
     formatted_drinks = [drink.short() for drink in drinks]
+
+    # print('Formatted drinks: {}'.format(formatted_drinks))
 
     return jsonify({
         'success': True,
@@ -63,7 +65,7 @@ def get_drinks_detail(payload):
 
     return jsonify({
         'success':True,
-        'drinks':formatted_drinks
+        'drinks-detail':formatted_drinks
     }), 200
 
 
@@ -79,20 +81,28 @@ implement endpoint
 @app.route('/drinks',methods=['POST'])
 @requires_auth('post:drinks')
 def create_drink(payload):
-    body=request.get_json()
+    body=request.get_json(payload)
+
+    if 'title' and 'recipe' not in body:
+        abort(422)
 
     try:
         title=body['title']
         recipe=body['recipe']
 
-        drink = Drink(title=title, recipe=recipe)
+        # if type(recipe)!=list:
+        #     recipe=[recipe]
+
+        drink = Drink(title=title, recipe=json.dumps(recipe))
         drink.insert()
 
         return jsonify({
             'success':True,
             'drinks':[drink.long()]
         }), 200
-    except Exception:
+
+    except Exception as e:
+        print(e)
         abort(422)
 
 '''
@@ -108,17 +118,22 @@ implement endpoint
 '''
 @app.route('/drinks/<int:drink_id>', methods=["PATCH"])
 @requires_auth('patch:drinks')
-def update_drink(drink_id, payload):
-    body = request.get_json()
+def update_drink(payload,drink_id):
+    body = request.get_json(payload)
+    new_title = body.get('title', None)
+    new_recipe = body.get('recipe', None)
 
-    drink = Drink.query.filter(Drink.id == drink_id).one_or_none()
-
-    if not drink:
-        abort(404)
-    
     try:
-        drink.title = body['title']
-        drink.recipe = body['recipe']
+        drink = Drink.query.filter(Drink.id == drink_id).one_or_none()
+
+        if not drink:
+            abort(404)
+
+        drink.title = new_title
+        drink.recipe = json.dumps(new_recipe)
+
+        # if type(recipe)!=list:
+        #     recipe=[recipe]
 
         drink.update()
 
@@ -127,7 +142,8 @@ def update_drink(drink_id, payload):
             'drinks':[drink.long()]
         }), 200
 
-    except Exception:
+    except Exception as e:
+        print(e)
         abort(422)
 
 '''
@@ -142,8 +158,8 @@ implement endpoint
 '''
 @app.route('/drinks/<int:drink_id>', methods=['DELETE'])
 @requires_auth('delete:drinks')
-def delete_drink(drink_id, payload):
-    drink=Drink.query.filter(Drink.id==drink_id)
+def delete_drink(payload,drink_id):
+    drink=Drink.query.filter(Drink.id==drink_id).one_or_none()
 
     if not drink:
         abort(404)
@@ -155,7 +171,8 @@ def delete_drink(drink_id, payload):
             'success':True,
             'delete': drink.id
         }), 200
-    except Exception:
+    except Exception as e:
+        print(e)
         abort(422)
 
 
