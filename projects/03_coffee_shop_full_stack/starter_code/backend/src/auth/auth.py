@@ -73,33 +73,16 @@ implement check_permissions(permission, payload) method
     return true otherwise
 '''
 def check_permissions(payload,permission):
-    # raise Exception('Not Implemented')
-    print(permission)
-    print(payload)
+    if 'permissions' not in payload:
+        abort(400)
 
-    try:
-        if permission in payload.get('permissions'):
-            print('User has permission')
-
-        if payload.get('permissions'):
-            permissions_scope = payload.get('permissions')
-
-            if permission not in permissions_scope:
-                raise AuthError({
-                    'code': 'unauthorized',
-                    'description': 'Permission not found.'
-                }, 401)
-
-        else:         
-            raise AuthError(
-            {
-                'code': 'invalid_claims',
-                'description': 'User does not have roles in JWT'
-            }, 401)
-    except Exception as e:
-        traceback.print_exc()
-
+    if permission not in payload['permissions']:
+        raise AuthError({
+            'code': 'unauthorized',
+            'description': 'Permission Not found',
+        }, 401)
     return True
+
 
 '''
 implement verify_decode_jwt(token) method
