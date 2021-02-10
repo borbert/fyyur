@@ -16,7 +16,7 @@ CORS(app)
 !! NOTE THIS WILL DROP ALL RECORDS AND START YOUR DB FROM SCRATCH
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 '''
-db_drop_and_create_all()
+# db_drop_and_create_all()
 
 # CORS Headers
 @app.after_request
@@ -81,6 +81,7 @@ implement endpoint
 @app.route('/drinks',methods=['POST'])
 @requires_auth('post:drinks')
 def create_drink(payload):
+    print(payload)
     body=request.get_json(payload)
 
     if 'title' and 'recipe' not in body:

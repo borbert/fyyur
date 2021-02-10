@@ -74,11 +74,12 @@ implement check_permissions(permission, payload) method
 '''
 def check_permissions(payload,permission):
     # raise Exception('Not Implemented')
-    # print(permission)
-    # print(payload)
+    print(permission)
+    print(payload)
+
     try:
-        # if permission in payload.get('permissions'):
-        #     print('User has permission')
+        if permission in payload.get('permissions'):
+            print('User has permission')
 
         if payload.get('permissions'):
             permissions_scope = payload.get('permissions')
@@ -87,7 +88,7 @@ def check_permissions(payload,permission):
                 raise AuthError({
                     'code': 'unauthorized',
                     'description': 'Permission not found.'
-                }, 403)
+                }, 401)
 
         else:         
             raise AuthError(
