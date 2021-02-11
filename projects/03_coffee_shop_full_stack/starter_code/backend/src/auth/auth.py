@@ -23,12 +23,20 @@ class AuthError(Exception):
 ## Auth Header
 
 '''
-implement get_token_auth_header() method
-    it should attempt to get the header from the request
-        it should raise an AuthError if no header is present
-    it should attempt to split bearer and the token
-        it should raise an AuthError if the header is malformed
-    return the token part of the header
+The get_token_auth_header() method attempts to get the header from the request and parse it.  It 
+takes in a payload from the request, validates that it is properly formatted, splits the 
+authorization header into the two parts of a bearer token, and returns the token.  
+Calling:
+    get_token_auth_header()
+Requires:
+    Auth header with a breaer token (payload)
+Returns:
+    Auth token
+Known errors
+    AuthError if no header is present.
+    AuthError if the header is malformed.
+    AuthError is the token is not a proper bearer token.
+
 '''
 def get_token_auth_header():
     auth_header=request.headers.get('Authorization', None)
@@ -62,15 +70,23 @@ def get_token_auth_header():
     return token
 
 '''
-implement check_permissions(permission, payload) method
-    @INPUTS
-        permission: string permission (i.e. 'post:drink')
-        payload: decoded jwt payload
+The get_token_auth_header() method attempts to get the header from the request and parse it.  It 
+takes in a payload from the request, validates that it is properly formatted, splits the 
+authorization header into the two parts of a bearer token, and returns the token.  
 
-    it should raise an AuthError if permissions are not included in the payload
-        !!NOTE check your RBAC settings in Auth0
-    it should raise an AuthError if the requested permission string is not in the payload permissions array
-    return true otherwise
+Calling:
+    check_permissions(permission, payload)
+Parameters:
+    Permission:  desired permission as a string (i.e. 'post:drink').
+    Payload:  decoded jwt token.
+Requires:
+    Auth header with a breaer token (payload)
+    Permissions that are needed to complete the requested action.
+Returns:
+    Boolean:  True (success) or Errors
+Known errors
+    Abort (400) if permissions are not included in the token.
+    AuthError (401) if desired permission is not in the token.
 '''
 def check_permissions(payload,permission):
     if 'permissions' not in payload:
@@ -85,17 +101,24 @@ def check_permissions(payload,permission):
 
 
 '''
-implement verify_decode_jwt(token) method
-    @INPUTS
-        token: a json web token (string)
+The verify_decode_jwt() method takes in the authorization token and decodes it for use in the 
+authorization functions.  It takes an encoded jwt token and attempts to parse it.  It returns the 
+parsed and decoded token.
 
-    it should be an Auth0 token with key id (kid)
-    it should verify the token using Auth0 /.well-known/jwks.json
-    it should decode the payload from the token
-    it should validate the claims
-    return the decoded payload
-
-    !!NOTE urlopen has a common certificate error described here: https://stackoverflow.com/questions/50236117/scraping-ssl-certificate-verify-failed-error-for-http-en-wikipedia-org
+Calling: 
+    verify_decode_jwt(token).
+Parameters:
+    token: a json web token (string).
+Requires:
+    JWT token.
+Returns:
+    Decoded JWT payload.
+Known Errors:
+    401 status code invalid_header:  malformed authroization header.
+    401 status code token_expired:  expired token.
+    401 status code invalid_claims:  incorrect audience or issuer.
+    400 status code invalid_header:  unable to parse token.
+    400 status code invalid_header:  unable to find RSA key.
 '''
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -141,40 +164,47 @@ def verify_decode_jwt(token):
 
                 return payload
 
+            #Expired token
             except jwt.ExpiredSignatureError:
                 raise AuthError({
                     'code': 'token_expired',
                     'description': 'Token expired.'
                 }, 401)
-
+            #Token error in audience or issuer
             except jwt.JWTClaimsError:
                 raise AuthError({
                     'code': 'invalid_claims',
                     'description': 'Incorrect claims. Please, check the audience and issuer.'
                 }, 401)
+            #Catch any other exceptions that arise
             except Exception as e:
                 traceback.print_exc()
                 raise AuthError({
                     'code': 'invalid_header',
                     'description': 'Unable to parse authentication token.'
                 }, 400)
-
+        #If no RSA key raise an auth error
         raise AuthError({
                     'code': 'invalid_header',
                     'description': 'Unable to find the appropriate key.'
                 }, 400)
+    #Traceback is helping in debugging during dev
     except Exception as e:
         traceback.print_exc()
 
 '''
-implement @requires_auth(permission) decorator method
-    @INPUTS
-        permission: string permission (i.e. 'post:drink')
+The @requires_auth(permission) decorator method is used to check permissions before preforming 
+certain acitons of the api.  It calls the get_token_auth_header, verify_decode_jwt, and check_permissions 
+methods to authorize particular actions.  
 
-    it should use the get_token_auth_header method to get the token
-    it should use the verify_decode_jwt method to decode the jwt
-    it should use the check_permissions method validate claims and check the requested permission
-    return the decorator which passes the decoded payload to the decorated method
+Calling:
+    @requires_auth(permission)
+Parameters:
+    permission: string permission (i.e. 'post:drink')
+Returns:
+    Reuslts of get_token_auth_header, verify_decode_jwt, and check_permissions methods.
+Known errors:
+    None
 '''
 def requires_auth(permission=''):
     def requires_auth_decorator(f):
